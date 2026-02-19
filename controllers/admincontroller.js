@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/user');
 
 // @desc Make user admin
 // @route POST /api/admin/make-admin/:userId
