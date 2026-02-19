@@ -1,4 +1,4 @@
-const Resource = require('../models/Resource');
+const Resource = require('../models/resource');
 const multer = require('multer');
 const path = require('path');
 
