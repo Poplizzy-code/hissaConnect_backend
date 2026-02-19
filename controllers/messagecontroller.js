@@ -1,5 +1,5 @@
-const Message = require('../models/Message');
-const User = require('../models/User');
+const Message = require('../models/message');
+const User = require('../models/user');
 
 // @desc Send direct message
 // @route POST /api/messages/direct/:recipientId
