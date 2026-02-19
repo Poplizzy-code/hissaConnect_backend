@@ -1,6 +1,6 @@
 const express = require('express');
-const { makeAdmin, getAllUsers } = require('../controllers/adminController');
-const { uploadResource, getResourcesByLevel, getAllResources } = require('../controllers/resourceController');
+const { makeAdmin, getAllUsers } = require('../controllers/admincontroller');
+const { uploadResource, getResourcesByLevel, getAllResources } = require('../controllers/resourcecontroller');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
