@@ -5,7 +5,7 @@ const {
   createGroup,
   getConversations,
   getGroups,
-} = require('../controllers/messageController');
+} = require('../controllers/messagecontroller');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
