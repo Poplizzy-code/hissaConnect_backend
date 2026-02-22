@@ -1,16 +1,10 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendVerificationEmail = async (email, firstName, code) => {
-  const mailOptions = {
-    from: `"HISSA Connect" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: 'HISSA Connect <onboarding@resend.dev>',
     to: email,
     subject: 'Verify Your HISSA Connect Account',
     html: `
@@ -31,9 +25,7 @@ const sendVerificationEmail = async (email, firstName, code) => {
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 };
 
 module.exports = { sendVerificationEmail };
