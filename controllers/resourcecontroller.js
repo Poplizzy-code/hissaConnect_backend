@@ -1,14 +1,21 @@
 const Resource = require('../models/resource');
+const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'hissaconnect-resources',
+    allowed_formats: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
   },
 });
 
@@ -18,31 +25,31 @@ const upload = multer({ storage }).single('file');
 // @route POST /api/admin/upload-resource
 // @access Private/Admin
 exports.uploadResource = async (req, res) => {
-  try {
-    upload(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: 'File upload error: ' + err.message,
-        });
-      }
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error: ' + err.message,
+      });
+    }
 
-      const { title, description, level, section, fileType } = req.body;
+    const { title, description, level, section, fileType } = req.body;
 
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'Please upload a file',
-        });
-      }
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a file',
+      });
+    }
 
+    try {
       const resource = await Resource.create({
         title,
         description,
         level,
         section,
         fileType,
-        fileUrl: `/uploads/${req.file.filename}`,
+        fileUrl: req.file.path,
         uploadedBy: req.user.id,
       });
 
@@ -51,13 +58,13 @@ exports.uploadResource = async (req, res) => {
         message: 'Resource uploaded successfully',
         data: resource,
       });
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  });
 };
 
 // @desc Get resources by level
@@ -69,9 +76,7 @@ exports.getResourcesByLevel = async (req, res) => {
     const { section } = req.query;
 
     let query = { level };
-    if (section) {
-      query.section = section;
-    }
+    if (section) query.section = section;
 
     const resources = await Resource.find(query).populate('uploadedBy', 'firstName lastName');
 
