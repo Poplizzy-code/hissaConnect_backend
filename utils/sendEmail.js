@@ -3,7 +3,7 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendVerificationEmail = async (email, firstName, code) => {
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: 'HISSA Connect <onboarding@resend.dev>',
     to: email,
     subject: 'Verify Your HISSA Connect Account',
@@ -26,6 +26,13 @@ const sendVerificationEmail = async (email, firstName, code) => {
       </div>
     `,
   });
+
+  if (error) {
+    console.error('Resend error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('Email sent successfully:', data);
 };
 
 module.exports = { sendVerificationEmail };
