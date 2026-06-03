@@ -24,6 +24,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/resources', require('./routes/resources'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/news', require('./routes/news'));
+app.use('/api/friends', require('./routes/friends'));
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'Server is running' });
@@ -59,6 +60,8 @@ io.use(async (socket, next) => {
 
 // Track online users: userId -> socketId
 const onlineUsers = new Map();
+app.set('io', io);
+app.set('onlineUsers', onlineUsers);
 
 io.on('connection', (socket) => {
   onlineUsers.set(socket.userId, socket.id);
@@ -105,6 +108,19 @@ io.on('connection', (socket) => {
       }
 
       if (!conversation) return;
+
+      // Enforce 3-message limit for non-friends in direct conversations
+      if (conversation.conversationType === 'direct') {
+        const [p1, p2] = conversation.participants;
+        const p1User = await User.findById(p1).select('friends');
+        const areFriends = p1User.friends.some((f) => f.toString() === p2.toString());
+        if (!areFriends && conversation.messages.length >= 3) {
+          socket.emit('message_limit_reached', {
+            message: 'Message limit reached. Send a friend request to unlock unlimited messaging.',
+          });
+          return;
+        }
+      }
 
       const newMsg = { sender: socket.userId, content, timestamp: new Date() };
       conversation.messages.push(newMsg);

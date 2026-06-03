@@ -1,5 +1,6 @@
 const Message = require('../models/message');
 const User = require('../models/user');
+const FriendRequest = require('../models/friendRequest');
 
 // @desc Send direct message (REST fallback)
 // @route POST /api/messages/direct/:recipientId
@@ -205,7 +206,7 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// @desc Get all users for People tab (with isFriend flag)
+// @desc Get all users for People tab (with isFriend + request status)
 // @route GET /api/messages/all-users
 // @access Private
 exports.getAllUsers = async (req, res) => {
@@ -222,45 +223,34 @@ exports.getAllUsers = async (req, res) => {
       ];
     }
 
-    const me = await User.findById(userId).select('friends');
+    const [me, users, pendingRequests] = await Promise.all([
+      User.findById(userId).select('friends'),
+      User.find(query).select('firstName lastName matricNo currentLevel profilePhoto bio').limit(50),
+      FriendRequest.find({
+        $or: [{ sender: userId }, { receiver: userId }],
+        status: 'pending',
+      }),
+    ]);
+
     const myFriendIds = new Set((me.friends || []).map((f) => f.toString()));
 
-    const users = await User.find(query)
-      .select('firstName lastName matricNo currentLevel profilePhoto bio')
-      .limit(50);
+    const requestMap = {};
+    pendingRequests.forEach((r) => {
+      const otherId = r.sender.toString() === userId ? r.receiver.toString() : r.sender.toString();
+      requestMap[otherId] = {
+        status: r.sender.toString() === userId ? 'sent' : 'received',
+        requestId: r._id,
+      };
+    });
 
-    const result = users.map((u) => ({ ...u.toObject(), isFriend: myFriendIds.has(u._id.toString()) }));
+    const result = users.map((u) => ({
+      ...u.toObject(),
+      isFriend: myFriendIds.has(u._id.toString()),
+      requestStatus: requestMap[u._id.toString()]?.status || null,
+      requestId: requestMap[u._id.toString()]?.requestId || null,
+    }));
+
     res.status(200).json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc Connect with a user (mutual)
-// @route POST /api/messages/add-friend/:friendId
-// @access Private
-exports.addFriend = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { friendId } = req.params;
-    await User.findByIdAndUpdate(userId, { $addToSet: { friends: friendId } });
-    await User.findByIdAndUpdate(friendId, { $addToSet: { friends: userId } });
-    res.status(200).json({ success: true, message: 'Connected successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc Remove connection
-// @route DELETE /api/messages/remove-friend/:friendId
-// @access Private
-exports.removeFriend = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { friendId } = req.params;
-    await User.findByIdAndUpdate(userId, { $pull: { friends: friendId } });
-    await User.findByIdAndUpdate(friendId, { $pull: { friends: userId } });
-    res.status(200).json({ success: true, message: 'Disconnected' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
