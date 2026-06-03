@@ -206,6 +206,28 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+// @desc Add a member to an existing group
+// @route POST /api/messages/groups/:groupId/add-member
+// @access Private
+exports.addMemberToGroup = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userId } = req.body;
+    const group = await Message.findById(groupId);
+    if (!group || group.conversationType !== 'group') {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+    if (!group.participants.map((p) => p.toString()).includes(userId)) {
+      group.participants.push(userId);
+      await group.save();
+    }
+    await group.populate('participants', 'firstName lastName profilePhoto');
+    res.status(200).json({ success: true, data: group });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc Get all users for People tab (with isFriend + request status)
 // @route GET /api/messages/all-users
 // @access Private

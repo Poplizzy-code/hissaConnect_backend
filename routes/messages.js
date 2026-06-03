@@ -4,6 +4,7 @@ const {
   sendGroupMessage,
   createGroup,
   joinGroup,
+  addMemberToGroup,
   getConversations,
   getGroups,
   getConversation,
@@ -28,5 +29,6 @@ router.post('/group/:groupId', protect, sendGroupMessage);
 router.post('/groups', protect, createGroup);
 router.get('/groups', protect, getGroups);
 router.post('/groups/:groupId/join', protect, joinGroup);
+router.post('/groups/:groupId/add-member', protect, addMemberToGroup);
 
 module.exports = router;
