@@ -9,7 +9,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1].trim();
     }
 
-    if (!token) {
+    if (!token || token === 'null' || token === 'undefined') {
       return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
     }
 
