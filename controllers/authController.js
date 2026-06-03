@@ -1,5 +1,15 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const upload = multer({ storage: multer.memoryStorage() }).single('profilePhoto');
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -87,4 +97,49 @@ exports.getMe = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+exports.updateProfile = async (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    try {
+      const { bio, phone, dateOfBirth, currentLevel } = req.body;
+      const updates = {};
+      if (bio !== undefined) updates.bio = bio;
+      if (phone !== undefined) updates.phone = phone;
+      if (dateOfBirth !== undefined) updates.dateOfBirth = dateOfBirth || null;
+      if (currentLevel) updates.currentLevel = currentLevel;
+
+      if (req.file) {
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'hissaconnect-profiles', resource_type: 'image' },
+            (error, result) => { if (error) reject(error); else resolve(result); }
+          );
+          stream.end(req.file.buffer);
+        });
+        updates.profilePhoto = uploadResult.secure_url;
+      }
+
+      const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+      res.status(200).json({
+        success: true,
+        data: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          matricNo: user.matricNo,
+          currentLevel: user.currentLevel,
+          role: user.role,
+          bio: user.bio,
+          phone: user.phone,
+          dateOfBirth: user.dateOfBirth,
+          profilePhoto: user.profilePhoto,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
 };

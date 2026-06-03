@@ -26,6 +26,8 @@ const userSchema = new mongoose.Schema(
     subscriptionStatus: { type: String, enum: ['free', 'premium'], default: 'free' },
     subscriptionExpiry: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+    dateOfBirth: { type: Date, default: null },
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

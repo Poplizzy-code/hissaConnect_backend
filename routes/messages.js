@@ -8,13 +8,19 @@ const {
   getGroups,
   getConversation,
   getUsers,
+  getAllUsers,
+  addFriend,
+  removeFriend,
 } = require('../controllers/messagecontroller');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Users for DM search
+// Users
 router.get('/users', protect, getUsers);
+router.get('/all-users', protect, getAllUsers);
+router.post('/add-friend/:friendId', protect, addFriend);
+router.delete('/remove-friend/:friendId', protect, removeFriend);
 
 // Direct messages
 router.post('/direct/:recipientId', protect, sendDirectMessage);

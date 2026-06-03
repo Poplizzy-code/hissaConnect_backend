@@ -204,3 +204,64 @@ exports.getUsers = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc Get all users for People tab (with isFriend flag)
+// @route GET /api/messages/all-users
+// @access Private
+exports.getAllUsers = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { search } = req.query;
+
+    let query = { _id: { $ne: userId } };
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { matricNo: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const me = await User.findById(userId).select('friends');
+    const myFriendIds = new Set((me.friends || []).map((f) => f.toString()));
+
+    const users = await User.find(query)
+      .select('firstName lastName matricNo currentLevel profilePhoto bio')
+      .limit(50);
+
+    const result = users.map((u) => ({ ...u.toObject(), isFriend: myFriendIds.has(u._id.toString()) }));
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc Connect with a user (mutual)
+// @route POST /api/messages/add-friend/:friendId
+// @access Private
+exports.addFriend = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { friendId } = req.params;
+    await User.findByIdAndUpdate(userId, { $addToSet: { friends: friendId } });
+    await User.findByIdAndUpdate(friendId, { $addToSet: { friends: userId } });
+    res.status(200).json({ success: true, message: 'Connected successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc Remove connection
+// @route DELETE /api/messages/remove-friend/:friendId
+// @access Private
+exports.removeFriend = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { friendId } = req.params;
+    await User.findByIdAndUpdate(userId, { $pull: { friends: friendId } });
+    await User.findByIdAndUpdate(friendId, { $pull: { friends: userId } });
+    res.status(200).json({ success: true, message: 'Disconnected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
