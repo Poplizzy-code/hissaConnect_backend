@@ -93,3 +93,23 @@ exports.getAllResources = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc Delete a resource
+// @route DELETE /api/admin/resources/:id
+// @access Private/Admin
+exports.deleteResource = async (req, res) => {
+  try {
+    const resource = await Resource.findById(req.params.id);
+    if (!resource) return res.status(404).json({ success: false, message: 'Resource not found' });
+
+    const match = resource.fileUrl.match(/cloudinary\.com\/[^/]+\/(image|raw|video)\/upload\/(?:v\d+\/)?(.+)/);
+    if (match) {
+      await cloudinary.uploader.destroy(match[2], { resource_type: match[1] });
+    }
+
+    await resource.deleteOne();
+    res.status(200).json({ success: true, message: 'Resource deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -33,6 +33,23 @@ exports.makeAdmin = async (req, res) => {
   }
 };
 
+// @desc Remove admin role from user
+// @route POST /api/admin/remove-admin/:userId
+// @access Private/Admin
+exports.removeAdmin = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { role: 'student' },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.status(200).json({ success: true, message: 'Admin role removed', data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc Get all users
 // @route GET /api/admin/users
 // @access Private/Admin
